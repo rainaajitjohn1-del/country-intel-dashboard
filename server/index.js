@@ -3,12 +3,21 @@ const cors = require('cors');
 require('dotenv').config();
 const pool = require('./db');
 
+const countriesRouter = require('./routes/countries');
+const statsRouter = require('./routes/stats');
+const exchangeRouter = require('./routes/exchange');
+
 const app = express();
 const PORT = process.env.PORT || 8000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Routes
+app.use('/api/countries', countriesRouter);
+app.use('/api/stats', statsRouter);
+app.use('/api/exchange', exchangeRouter);
 
 // Test route
 app.get('/', (req, res) => {
