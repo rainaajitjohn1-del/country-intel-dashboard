@@ -18,4 +18,5 @@ export const getLatestStats = (isoCode) => api.get(`/stats/${isoCode}/latest`);
 // Exchange rates
 export const getExchangeRate = (currencyCode) => api.get(`/exchange/${currencyCode}`);
 export const getAllExchangeRates = () => api.get('/exchange');
+export const getCurrencyStrength = (homeCurrency, foreignCurrency) => api.get(`/exchange/strength/${homeCurrency}/${foreignCurrency}`);
 export const compareExchangeRates = (from, to) => api.get(`/exchange/compare/${from}/${to}`);
