@@ -6,7 +6,10 @@ const pool = require('../db');
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, name, iso_code, region, capital, flag_url, currency_code, currency_name FROM countries ORDER BY name'
+      `SELECT id, name, iso_code, region, capital, flag_url, currency_code, currency_name 
+       FROM countries 
+       WHERE currency_code IS NOT NULL AND capital != ''
+       ORDER BY name`
     );
     res.json(result.rows);
   } catch (err) {
@@ -19,7 +22,10 @@ router.get('/search', async (req, res) => {
   try {
     const { q } = req.query;
     const result = await pool.query(
-      'SELECT id, name, iso_code, region, capital, flag_url, currency_code, currency_name FROM countries WHERE name ILIKE $1 ORDER BY name',
+      `SELECT id, name, iso_code, region, capital, flag_url, currency_code, currency_name 
+       FROM countries 
+       WHERE name ILIKE $1 AND currency_code IS NOT NULL AND capital != ''
+       ORDER BY name`,
       [`%${q}%`]
     );
     res.json(result.rows);

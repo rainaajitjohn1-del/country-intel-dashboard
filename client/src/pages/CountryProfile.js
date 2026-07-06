@@ -14,19 +14,32 @@ function CountryProfile() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [countryRes, statsRes, histRes] = await Promise.all([
-          getCountry(iso_code),
-          getLatestStats(iso_code),
-          getCountryStats(iso_code),
-        ]);
+        const countryRes = await getCountry(iso_code);
         setCountry(countryRes.data);
-        setStats(statsRes.data);
-        setHistoricalStats(histRes.data.reverse());
 
-        if (countryRes.data.currency_code) {
-          const exRes = await getExchangeRate(countryRes.data.currency_code);
-          setExchangeRate(exRes.data);
+        try {
+          const statsRes = await getLatestStats(iso_code);
+          setStats(statsRes.data);
+        } catch (err) {
+          console.log('No stats available');
         }
+
+        try {
+          const histRes = await getCountryStats(iso_code);
+          setHistoricalStats(histRes.data.reverse());
+        } catch (err) {
+          console.log('No historical stats available');
+        }
+
+        try {
+          if (countryRes.data.currency_code) {
+            const exRes = await getExchangeRate(countryRes.data.currency_code);
+            setExchangeRate(exRes.data);
+          }
+        } catch (err) {
+          console.log('No exchange rate available');
+        }
+
       } catch (err) {
         console.error(err);
       } finally {
@@ -53,7 +66,7 @@ function CountryProfile() {
         </div>
       </div>
 
-      {stats && (
+      {stats ? (
         <div style={styles.statsGrid}>
           <div style={styles.statCard}>
             <h3>GDP</h3>
@@ -79,6 +92,10 @@ function CountryProfile() {
             <h3>Unemployment</h3>
             <p>{stats.unemployment_rate ? parseFloat(stats.unemployment_rate).toFixed(2) + '%' : 'N/A'}</p>
           </div>
+        </div>
+      ) : (
+        <div style={styles.noStats}>
+          <p>No statistical data available for this country yet.</p>
         </div>
       )}
 
@@ -108,6 +125,7 @@ const styles = {
   meta: { margin: '0.3rem 0', color: '#555' },
   statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '1rem', marginBottom: '2rem' },
   statCard: { backgroundColor: 'white', padding: '1.5rem', borderRadius: '12px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' },
+  noStats: { backgroundColor: 'white', padding: '2rem', borderRadius: '12px', textAlign: 'center', color: '#888', marginBottom: '2rem' },
   chartSection: { backgroundColor: 'white', padding: '2rem', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' },
 };
 

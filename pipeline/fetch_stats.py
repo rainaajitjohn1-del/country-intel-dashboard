@@ -2,6 +2,7 @@ import requests
 import psycopg2
 from dotenv import load_dotenv
 import os
+import time
 
 load_dotenv()
 
@@ -13,7 +14,6 @@ conn = psycopg2.connect(
 )
 cur = conn.cursor()
 
-# World Bank indicators
 INDICATORS = {
     'gdp': 'NY.GDP.MKTP.CD',
     'gdp_growth_rate': 'NY.GDP.MKTP.KD.ZG',
@@ -24,28 +24,48 @@ INDICATORS = {
     'inflation_rate': 'FP.CPI.TOTL.ZG'
 }
 
-def fetch_indicator(indicator_code):
-    url = f"https://api.worldbank.org/v2/country/all/indicator/{indicator_code}?format=json&per_page=1000&mrv=1"
-    response = requests.get(url)
-    data = response.json()
-    if len(data) > 1 and data[1]:
-        return data[1]
-    return []
+def fetch_indicator(indicator_code, retries=3):
+    all_records = []
+    page = 1
+    while True:
+        url = f"https://api.worldbank.org/v2/country/all/indicator/{indicator_code}?format=json&per_page=1000&mrv=20&page={page}"
+        for attempt in range(retries):
+            try:
+                response = requests.get(url, timeout=60)
+                if response.status_code == 200 and response.text.strip():
+                    data = response.json()
+                    if len(data) > 1 and data[1]:
+                        all_records.extend(data[1])
+                        total_pages = data[0].get('pages', 1)
+                        print(f"  Page {page}/{total_pages}")
+                        if page >= total_pages:
+                            return all_records
+                        page += 1
+                        time.sleep(1)
+                        break
+                time.sleep(3)
+            except Exception as e:
+                print(f"Error fetching {indicator_code} page {page}: {e}")
+                time.sleep(5)
+        else:
+            return all_records
+    return all_records
 
-# Get all country ids from database
 cur.execute("SELECT id, iso_code FROM countries")
 country_map = {row[1]: row[0] for row in cur.fetchall()}
 
-print("Fetching World Bank stats...")
+print("Clearing old stats...")
+cur.execute("TRUNCATE country_stats;")
+conn.commit()
 
-# Fetch each indicator
+print("Fetching World Bank stats (20 years)...")
+
 all_data = {}
 for stat_name, indicator_code in INDICATORS.items():
     print(f"Fetching {stat_name}...")
     records = fetch_indicator(indicator_code)
+    print(f"Got {len(records)} records for {stat_name}")
     for record in records:
-        iso = record.get('countryiso3code', '')
-        # Convert iso3 to iso2 using country code
         iso2 = record.get('country', {}).get('id', '')
         value = record.get('value')
         year = record.get('date')
@@ -83,4 +103,4 @@ for (iso2, year), stats in all_data.items():
 conn.commit()
 cur.close()
 conn.close()
-print("Done! Stats inserted successfully.")
+print("Done! Historical stats inserted successfully.")
