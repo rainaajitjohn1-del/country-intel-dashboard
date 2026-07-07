@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { getCountry, getLatestStats, getExchangeRate, getCountryStats, getCurrencyStrength, getCostOfLiving } from '../services/api';
+import { getCountry, getLatestStats, getExchangeRate, getCountryStats, getCurrencyStrength, getCostOfLiving, getSimilarCountries } from '../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 function CountryProfile() {
@@ -16,6 +16,7 @@ function CountryProfile() {
   const [homeCountry, setHomeCountry] = useState('');
   const [costOfLiving, setCostOfLiving] = useState(null);
   const [colLoading, setColLoading] = useState(false);
+  const [similarCountries, setSimilarCountries] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -44,6 +45,13 @@ function CountryProfile() {
           }
         } catch (err) {
           console.log('No exchange rate available');
+        }
+
+        try {
+          const similarRes = await getSimilarCountries(iso_code);
+          setSimilarCountries(similarRes.data);
+        } catch (err) {
+          console.log('No similar countries available');
         }
 
       } catch (err) {
@@ -110,11 +118,7 @@ function CountryProfile() {
             style={styles.input}
             maxLength={3}
           />
-          <button
-            onClick={handleCurrencyCheck}
-            style={styles.button}
-            disabled={strengthLoading}
-          >
+          <button onClick={handleCurrencyCheck} style={styles.button} disabled={strengthLoading}>
             {strengthLoading ? 'Checking...' : 'Check Strength'}
           </button>
         </div>
@@ -154,11 +158,7 @@ function CountryProfile() {
             style={styles.input}
             maxLength={2}
           />
-          <button
-            onClick={handleCostOfLiving}
-            style={styles.button}
-            disabled={colLoading}
-          >
+          <button onClick={handleCostOfLiving} style={styles.button} disabled={colLoading}>
             {colLoading ? 'Checking...' : 'Compare Cost'}
           </button>
         </div>
@@ -249,6 +249,30 @@ function CountryProfile() {
           </ResponsiveContainer>
         </div>
       )}
+
+      {/* Similar Countries */}
+      {similarCountries.length > 0 && (
+        <div style={styles.card}>
+          <h2 style={styles.cardTitle}>🌍 Similar Countries</h2>
+          <p style={styles.cardSubtitle}>Countries with similar economic profile and region</p>
+          <div style={styles.similarGrid}>
+            {similarCountries.map((c) => (
+              <div
+                key={c.iso_code}
+                style={styles.similarCard}
+                onClick={() => window.location.href = `/country/${c.iso_code}`}
+              >
+                {c.flag_url && <img src={c.flag_url} alt="" style={styles.similarFlag} />}
+                <p style={styles.similarName}>{c.name}</p>
+                <p style={styles.similarDetail}>{c.region}</p>
+                <p style={styles.similarDetail}>
+                  GDP: ${c.gdp ? (parseFloat(c.gdp) / 1e9).toFixed(0) + 'B' : 'N/A'}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -273,6 +297,11 @@ const styles = {
   noStats: { backgroundColor: 'white', padding: '2rem', borderRadius: '12px', textAlign: 'center', color: '#888', marginBottom: '1.5rem' },
   colGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem', marginTop: '1rem' },
   colItem: { backgroundColor: 'rgba(0,0,0,0.05)', padding: '0.75rem', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.9rem' },
+  similarGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '1rem' },
+  similarCard: { backgroundColor: '#f8f9fa', padding: '1rem', borderRadius: '8px', textAlign: 'center', cursor: 'pointer' },
+  similarFlag: { width: '60px', height: '40px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.5rem' },
+  similarName: { margin: '0 0 0.3rem', fontWeight: 'bold', fontSize: '0.9rem' },
+  similarDetail: { margin: '0.2rem 0', fontSize: '0.8rem', color: '#666' },
 };
 
 export default CountryProfile;
