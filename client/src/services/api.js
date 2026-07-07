@@ -24,3 +24,23 @@ export const getCostOfLiving = (homeCountry, foreignCountry) => api.get(`/exchan
 export const getVisaRequirements = (passportCode) => api.get(`/countries/visa/${passportCode}`);
 export const getSimilarCountries = (isoCode) => api.get(`/countries/${isoCode}/similar`);
 export const getBestTimeToVisit = (homeCurrency, foreignCurrency) => api.get(`/exchange/besttime/${homeCurrency}/${foreignCurrency}`);
+
+export const getWatchlist = () => {
+  const token = localStorage.getItem('token');
+  return api.get('/watchlist', { headers: { Authorization: `Bearer ${token}` } });
+};
+
+export const addToWatchlist = (isoCode) => {
+  const token = localStorage.getItem('token');
+  return api.post(`/watchlist/${isoCode}`, {}, { headers: { Authorization: `Bearer ${token}` } });
+};
+
+export const removeFromWatchlist = (isoCode) => {
+  const token = localStorage.getItem('token');
+  return api.delete(`/watchlist/${isoCode}`, { headers: { Authorization: `Bearer ${token}` } });
+};
+
+export const checkWatchlist = (isoCode) => {
+  const token = localStorage.getItem('token');
+  return api.get(`/watchlist/check/${isoCode}`, { headers: { Authorization: `Bearer ${token}` } });
+};

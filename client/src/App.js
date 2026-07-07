@@ -7,6 +7,7 @@ import Compare from './pages/Compare';
 import TravelEligibility from './pages/TravelEligibility';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Watchlist from './pages/Watchlist';
 import { AuthProvider } from './context/AuthContext';
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
           <Route path="/travel" element={<TravelEligibility />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/watchlist" element={<Watchlist />} />
         </Routes>
       </Router>
     </AuthProvider>

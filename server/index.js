@@ -10,7 +10,7 @@ const exchangeRouter = require('./routes/exchange');
 const app = express();
 const PORT = process.env.PORT || 8000;
 const authRouter = require('./routes/auth');
-
+const watchlistRouter = require('./routes/watchlist');
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -20,6 +20,9 @@ app.use('/api/countries', countriesRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/exchange', exchangeRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/watchlist', watchlistRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/watchlist', watchlistRouter);
 
 // Test route
 app.get('/', (req, res) => {

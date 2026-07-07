@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { getCountry, getLatestStats, getExchangeRate, getCountryStats, getCurrencyStrength, getCostOfLiving, getSimilarCountries, getBestTimeToVisit } from '../services/api';
+import { getCountry, getLatestStats, getExchangeRate, getCountryStats, getCurrencyStrength, getCostOfLiving, getSimilarCountries, getBestTimeToVisit, addToWatchlist, removeFromWatchlist, checkWatchlist } from '../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useAuth } from '../context/AuthContext';
 
 function CountryProfile() {
   const { iso_code } = useParams();
@@ -20,6 +21,8 @@ function CountryProfile() {
   const [bestTime, setBestTime] = useState(null);
   const [bestTimeLoading, setBestTimeLoading] = useState(false);
   const [bestTimeCurrency, setBestTimeCurrency] = useState('');
+  const [inWatchlist, setInWatchlist] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -57,6 +60,15 @@ function CountryProfile() {
           console.log('No similar countries available');
         }
 
+        if (user) {
+          try {
+            const watchRes = await checkWatchlist(iso_code);
+            setInWatchlist(watchRes.data.inWatchlist);
+          } catch (err) {
+            console.log('Could not check watchlist');
+          }
+        }
+
       } catch (err) {
         console.error(err);
       } finally {
@@ -64,7 +76,7 @@ function CountryProfile() {
       }
     };
     fetchData();
-  }, [iso_code]);
+  }, [iso_code, user]);
 
   const handleCurrencyCheck = async () => {
     if (!homeCurrency || !country?.currency_code) return;
@@ -102,6 +114,24 @@ function CountryProfile() {
     setBestTimeLoading(false);
   };
 
+  const handleWatchlist = async () => {
+    if (!user) {
+      window.location.href = '/login';
+      return;
+    }
+    try {
+      if (inWatchlist) {
+        await removeFromWatchlist(iso_code);
+        setInWatchlist(false);
+      } else {
+        await addToWatchlist(iso_code);
+        setInWatchlist(true);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   if (loading) return <p style={{ padding: '2rem' }}>Loading...</p>;
   if (!country) return <p style={{ padding: '2rem' }}>Country not found.</p>;
 
@@ -110,13 +140,20 @@ function CountryProfile() {
       {/* Header */}
       <div style={styles.header}>
         {country.flag_url && <img src={country.flag_url} alt={country.name} style={styles.flag} />}
-        <div>
+        <div style={{ flex: 1 }}>
           <h1 style={styles.name}>{country.name}</h1>
           <p style={styles.meta}>{country.region} • Capital: {country.capital}</p>
           <p style={styles.meta}>Currency: {country.currency_name} ({country.currency_code})</p>
           {exchangeRate && (
             <p style={styles.meta}>1 USD = {parseFloat(exchangeRate.rate_to_usd).toFixed(2)} {country.currency_code}</p>
           )}
+          <button onClick={handleWatchlist} style={{
+            ...styles.button,
+            marginTop: '1rem',
+            backgroundColor: inWatchlist ? '#e91e63' : '#1a1a2e',
+          }}>
+            {inWatchlist ? '⭐ Remove from Watchlist' : '☆ Add to Watchlist'}
+          </button>
         </div>
       </div>
 
@@ -226,9 +263,7 @@ function CountryProfile() {
               <p style={{ color: '#e91e63' }}>{bestTime.error}</p>
             ) : (
               <>
-                <p style={styles.resultMessage}>
-                  {bestTime.verdict}
-                </p>
+                <p style={styles.resultMessage}>{bestTime.verdict}</p>
                 <p style={{ ...styles.resultVerdict, marginBottom: '0.5rem' }}>
                   {bestTime.trendMessage}
                 </p>

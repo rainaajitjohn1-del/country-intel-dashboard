@@ -20,6 +20,7 @@ function Navbar() {
         <Link to="/travel" style={styles.link}>Travel</Link>
         {user ? (
           <>
+            <Link to="/watchlist" style={styles.link}>⭐ Watchlist</Link>
             <span style={styles.username}>👤 {user.name}</span>
             <button onClick={handleLogout} style={styles.logoutBtn}>Logout</button>
           </>
