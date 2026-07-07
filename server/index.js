@@ -9,6 +9,7 @@ const exchangeRouter = require('./routes/exchange');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
+const authRouter = require('./routes/auth');
 
 // Middleware
 app.use(cors());
@@ -18,6 +19,7 @@ app.use(express.json());
 app.use('/api/countries', countriesRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/exchange', exchangeRouter);
+app.use('/api/auth', authRouter);
 
 // Test route
 app.get('/', (req, res) => {

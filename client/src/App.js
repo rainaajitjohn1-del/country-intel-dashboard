@@ -5,18 +5,25 @@ import Home from './pages/Home';
 import CountryProfile from './pages/CountryProfile';
 import Compare from './pages/Compare';
 import TravelEligibility from './pages/TravelEligibility';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import { AuthProvider } from './context/AuthContext';
 
 function App() {
   return (
-    <Router>
-      <Navbar />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/country/:iso_code" element={<CountryProfile />} />
-        <Route path="/compare" element={<Compare />} />
-        <Route path="/travel" element={<TravelEligibility />} />
-      </Routes>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <Navbar />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/country/:iso_code" element={<CountryProfile />} />
+          <Route path="/compare" element={<Compare />} />
+          <Route path="/travel" element={<TravelEligibility />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 
