@@ -23,3 +23,4 @@ export const compareExchangeRates = (from, to) => api.get(`/exchange/compare/${f
 export const getCostOfLiving = (homeCountry, foreignCountry) => api.get(`/exchange/col/${homeCountry}/${foreignCountry}`);
 export const getVisaRequirements = (passportCode) => api.get(`/countries/visa/${passportCode}`);
 export const getSimilarCountries = (isoCode) => api.get(`/countries/${isoCode}/similar`);
+export const getBestTimeToVisit = (homeCurrency, foreignCurrency) => api.get(`/exchange/besttime/${homeCurrency}/${foreignCurrency}`);

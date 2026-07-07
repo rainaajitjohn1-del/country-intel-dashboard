@@ -21,9 +21,9 @@ data = response.json()
 if data.get('result') == 'success':
     rates = data.get('rates', {})
     today = date.today()
-    
+
     print(f"Got {len(rates)} currency rates. Inserting...")
-    
+
     for currency_code, rate in rates.items():
         try:
             cur.execute("""
@@ -33,7 +33,7 @@ if data.get('result') == 'success':
             """, (currency_code, rate, today))
         except Exception as e:
             print(f"Error inserting {currency_code}: {e}")
-    
+
     conn.commit()
     print("Done! Exchange rates inserted successfully.")
 else:

@@ -51,6 +51,53 @@ router.get('/compare/:from/:to', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// Currency strength comparison
+router.get('/strength/:homeCurrency/:foreignCurrency', async (req, res) => {
+  try {
+    const { homeCurrency, foreignCurrency } = req.params;
+
+    const result = await pool.query(
+      `SELECT DISTINCT ON (currency_code) currency_code, rate_to_usd
+       FROM exchange_rates
+       WHERE currency_code = ANY($1)
+       ORDER BY currency_code, date DESC`,
+      [[homeCurrency.toUpperCase(), foreignCurrency.toUpperCase()]]
+    );
+
+    if (result.rows.length < 2) {
+      return res.status(404).json({ error: 'One or both currencies not found' });
+    }
+
+    const rates = {};
+    result.rows.forEach(row => {
+      rates[row.currency_code] = parseFloat(row.rate_to_usd);
+    });
+
+    const homeRate = rates[homeCurrency.toUpperCase()];
+    const foreignRate = rates[foreignCurrency.toUpperCase()];
+    const strength = foreignRate / homeRate;
+
+    let message = '';
+    if (strength > 1) {
+      message = `Your ${homeCurrency.toUpperCase()} is strong here — 1 ${homeCurrency.toUpperCase()} = ${strength.toFixed(2)} ${foreignCurrency.toUpperCase()}`;
+    } else {
+      message = `Your ${homeCurrency.toUpperCase()} is weak here — 1 ${homeCurrency.toUpperCase()} = ${strength.toFixed(2)} ${foreignCurrency.toUpperCase()}`;
+    }
+
+    res.json({
+      homeCurrency: homeCurrency.toUpperCase(),
+      foreignCurrency: foreignCurrency.toUpperCase(),
+      strength: strength.toFixed(4),
+      message,
+      verdict: strength > 1 ? 'strong' : 'weak'
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Cost of living comparison
 router.get('/col/:homeCountry/:foreignCountry', async (req, res) => {
   try {
@@ -86,50 +133,73 @@ router.get('/col/:homeCountry/:foreignCountry', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-module.exports = router;
-// Currency strength comparison
-router.get('/strength/:homeCurrency/:foreignCurrency', async (req, res) => {
+
+// Best time to visit based on historical exchange rates
+router.get('/besttime/:homeCurrency/:foreignCurrency', async (req, res) => {
   try {
     const { homeCurrency, foreignCurrency } = req.params;
-    
+
     const result = await pool.query(
-      `SELECT currency_code, rate_to_usd FROM exchange_rates
+      `SELECT currency_code, rate_to_usd, date
+       FROM exchange_rates
        WHERE currency_code = ANY($1)
-       ORDER BY date DESC`,
+       ORDER BY date ASC`,
       [[homeCurrency.toUpperCase(), foreignCurrency.toUpperCase()]]
     );
 
-    if (result.rows.length < 2) {
-      return res.status(404).json({ error: 'One or both currencies not found' });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'No historical data found' });
     }
 
-    const rates = {};
-    result.rows.forEach(row => {
-      rates[row.currency_code] = parseFloat(row.rate_to_usd);
-    });
+    const homeRates = result.rows.filter(r => r.currency_code === homeCurrency.toUpperCase());
+    const foreignRates = result.rows.filter(r => r.currency_code === foreignCurrency.toUpperCase());
 
-    const homeRate = rates[homeCurrency.toUpperCase()];
-    const foreignRate = rates[foreignCurrency.toUpperCase()];
-
-    // How much foreign currency does 1 unit of home currency get you
-    const strength = foreignRate / homeRate;
-
-    let message = '';
-    if (strength > 1) {
-      message = `Your ${homeCurrency.toUpperCase()} is strong here — 1 ${homeCurrency.toUpperCase()} = ${strength.toFixed(2)} ${foreignCurrency.toUpperCase()}`;
-    } else {
-      message = `Your ${homeCurrency.toUpperCase()} is weak here — 1 ${homeCurrency.toUpperCase()} = ${strength.toFixed(2)} ${foreignCurrency.toUpperCase()}`;
+    if (homeRates.length === 0 || foreignRates.length === 0) {
+      return res.status(404).json({ error: 'Currency not found' });
     }
+
+    const strengthHistory = homeRates.map((homeRate, i) => {
+      const foreignRate = foreignRates[i];
+      if (!foreignRate) return null;
+      return {
+        date: homeRate.date,
+        strength: parseFloat(foreignRate.rate_to_usd) / parseFloat(homeRate.rate_to_usd)
+      };
+    }).filter(Boolean);
+
+    const currentStrength = strengthHistory[strengthHistory.length - 1].strength;
+    const oldestStrength = strengthHistory[0].strength;
+    const avgStrength = strengthHistory.reduce((acc, s) => acc + s.strength, 0) / strengthHistory.length;
+    const maxStrength = Math.max(...strengthHistory.map(s => s.strength));
+    const minStrength = Math.min(...strengthHistory.map(s => s.strength));
+
+    const trend = currentStrength > oldestStrength ? 'strengthening' : 'weakening';
+    const trendPct = Math.abs((currentStrength - oldestStrength) / oldestStrength * 100).toFixed(1);
+    const vsAverage = ((currentStrength - avgStrength) / avgStrength * 100).toFixed(1);
+    const isGoodTime = currentStrength >= avgStrength;
 
     res.json({
       homeCurrency: homeCurrency.toUpperCase(),
       foreignCurrency: foreignCurrency.toUpperCase(),
-      strength: strength.toFixed(4),
-      message,
-      verdict: strength > 1 ? 'strong' : 'weak'
+      currentStrength: currentStrength.toFixed(4),
+      averageStrength: avgStrength.toFixed(4),
+      maxStrength: maxStrength.toFixed(4),
+      minStrength: minStrength.toFixed(4),
+      trend,
+      trendPct,
+      vsAverage,
+      isGoodTime,
+      verdict: isGoodTime
+        ? `✅ Good time to visit — your ${homeCurrency.toUpperCase()} is ${Math.abs(vsAverage)}% stronger than the 30-day average`
+        : `⚠️ Not the best time — your ${homeCurrency.toUpperCase()} is ${Math.abs(vsAverage)}% weaker than the 30-day average`,
+      trendMessage: `Your ${homeCurrency.toUpperCase()} has been ${trend} against ${foreignCurrency.toUpperCase()} over the last 30 days (${trendPct}% change)`,
+      dataPoints: strengthHistory.length,
+      history: strengthHistory
     });
 
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
+module.exports = router;

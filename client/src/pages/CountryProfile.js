@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { getCountry, getLatestStats, getExchangeRate, getCountryStats, getCurrencyStrength, getCostOfLiving, getSimilarCountries } from '../services/api';
+import { getCountry, getLatestStats, getExchangeRate, getCountryStats, getCurrencyStrength, getCostOfLiving, getSimilarCountries, getBestTimeToVisit } from '../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 function CountryProfile() {
@@ -17,6 +17,9 @@ function CountryProfile() {
   const [costOfLiving, setCostOfLiving] = useState(null);
   const [colLoading, setColLoading] = useState(false);
   const [similarCountries, setSimilarCountries] = useState([]);
+  const [bestTime, setBestTime] = useState(null);
+  const [bestTimeLoading, setBestTimeLoading] = useState(false);
+  const [bestTimeCurrency, setBestTimeCurrency] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -87,6 +90,18 @@ function CountryProfile() {
     setColLoading(false);
   };
 
+  const handleBestTime = async () => {
+    if (!bestTimeCurrency || !country?.currency_code) return;
+    setBestTimeLoading(true);
+    try {
+      const res = await getBestTimeToVisit(bestTimeCurrency, country.currency_code);
+      setBestTime(res.data);
+    } catch (err) {
+      setBestTime({ error: 'Not enough historical data for this currency pair.' });
+    }
+    setBestTimeLoading(false);
+  };
+
   if (loading) return <p style={{ padding: '2rem' }}>Loading...</p>;
   if (!country) return <p style={{ padding: '2rem' }}>Country not found.</p>;
 
@@ -122,10 +137,9 @@ function CountryProfile() {
             {strengthLoading ? 'Checking...' : 'Check Strength'}
           </button>
         </div>
-
         {currencyStrength && (
           <div style={{
-            ...styles.strengthResult,
+            ...styles.resultBox,
             backgroundColor: currencyStrength.verdict === 'strong' ? '#e8f5e9' : '#fce4ec',
             borderLeft: `4px solid ${currencyStrength.verdict === 'strong' ? '#4caf50' : '#e91e63'}`,
           }}>
@@ -133,11 +147,9 @@ function CountryProfile() {
               <p style={{ color: '#e91e63' }}>{currencyStrength.error}</p>
             ) : (
               <>
-                <p style={styles.strengthMessage}>{currencyStrength.message}</p>
-                <p style={styles.strengthVerdict}>
-                  {currencyStrength.verdict === 'strong'
-                    ? '✅ Your money goes further here'
-                    : '⚠️ This destination is expensive for your currency'}
+                <p style={styles.resultMessage}>{currencyStrength.message}</p>
+                <p style={styles.resultVerdict}>
+                  {currencyStrength.verdict === 'strong' ? '✅ Your money goes further here' : '⚠️ This destination is expensive for your currency'}
                 </p>
               </>
             )}
@@ -162,10 +174,9 @@ function CountryProfile() {
             {colLoading ? 'Checking...' : 'Compare Cost'}
           </button>
         </div>
-
         {costOfLiving && (
           <div style={{
-            ...styles.strengthResult,
+            ...styles.resultBox,
             backgroundColor: costOfLiving.verdict === 'cheaper' ? '#e8f5e9' : '#fce4ec',
             borderLeft: `4px solid ${costOfLiving.verdict === 'cheaper' ? '#4caf50' : '#e91e63'}`,
           }}>
@@ -173,27 +184,60 @@ function CountryProfile() {
               <p style={{ color: '#e91e63' }}>{costOfLiving.error}</p>
             ) : (
               <>
-                <p style={styles.strengthMessage}>
+                <p style={styles.resultMessage}>
                   {country.name} is {costOfLiving.percentage}% {costOfLiving.verdict} than {costOfLiving.home.name}
                 </p>
                 <div style={styles.colGrid}>
-                  <div style={styles.colItem}>
-                    <span>🛒 Groceries</span>
-                    <span>{costOfLiving.foreign.groceries_index} vs {costOfLiving.home.groceries_index}</span>
-                  </div>
-                  <div style={styles.colItem}>
-                    <span>🏠 Rent</span>
-                    <span>{costOfLiving.foreign.rent_index} vs {costOfLiving.home.rent_index}</span>
-                  </div>
-                  <div style={styles.colItem}>
-                    <span>🍽️ Restaurants</span>
-                    <span>{costOfLiving.foreign.restaurant_index} vs {costOfLiving.home.restaurant_index}</span>
-                  </div>
-                  <div style={styles.colItem}>
-                    <span>💪 Purchasing Power</span>
-                    <span>{costOfLiving.foreign.purchasing_power_index} vs {costOfLiving.home.purchasing_power_index}</span>
-                  </div>
+                  <div style={styles.colItem}><span>🛒 Groceries</span><span>{costOfLiving.foreign.groceries_index} vs {costOfLiving.home.groceries_index}</span></div>
+                  <div style={styles.colItem}><span>🏠 Rent</span><span>{costOfLiving.foreign.rent_index} vs {costOfLiving.home.rent_index}</span></div>
+                  <div style={styles.colItem}><span>🍽️ Restaurants</span><span>{costOfLiving.foreign.restaurant_index} vs {costOfLiving.home.restaurant_index}</span></div>
+                  <div style={styles.colItem}><span>💪 Purchasing Power</span><span>{costOfLiving.foreign.purchasing_power_index} vs {costOfLiving.home.purchasing_power_index}</span></div>
                 </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Best Time to Visit */}
+      <div style={styles.card}>
+        <h2 style={styles.cardTitle}>📅 Best Time to Visit</h2>
+        <p style={styles.cardSubtitle}>Enter your home currency to see if now is a good time to visit {country.name} based on historical exchange rates</p>
+        <div style={styles.inputRow}>
+          <input
+            type="text"
+            placeholder="Your currency code (e.g. INR, USD, EUR)"
+            value={bestTimeCurrency}
+            onChange={(e) => setBestTimeCurrency(e.target.value.toUpperCase())}
+            style={styles.input}
+            maxLength={3}
+          />
+          <button onClick={handleBestTime} style={styles.button} disabled={bestTimeLoading}>
+            {bestTimeLoading ? 'Checking...' : 'Check Timing'}
+          </button>
+        </div>
+        {bestTime && (
+          <div style={{
+            ...styles.resultBox,
+            backgroundColor: bestTime.isGoodTime ? '#e8f5e9' : '#fce4ec',
+            borderLeft: `4px solid ${bestTime.isGoodTime ? '#4caf50' : '#e91e63'}`,
+          }}>
+            {bestTime.error ? (
+              <p style={{ color: '#e91e63' }}>{bestTime.error}</p>
+            ) : (
+              <>
+                <p style={styles.resultMessage}>
+                  {bestTime.verdict}
+                </p>
+                <p style={{ ...styles.resultVerdict, marginBottom: '0.5rem' }}>
+                  {bestTime.trendMessage}
+                </p>
+                <p style={styles.resultVerdict}>
+                  Current: 1 {bestTime.homeCurrency} = {bestTime.currentStrength} {bestTime.foreignCurrency} •
+                  30-day avg: {bestTime.averageStrength} •
+                  High: {bestTime.maxStrength} •
+                  Low: {bestTime.minStrength}
+                </p>
               </>
             )}
           </div>
@@ -203,35 +247,15 @@ function CountryProfile() {
       {/* Stats Grid */}
       {stats ? (
         <div style={styles.statsGrid}>
-          <div style={styles.statCard}>
-            <h3>GDP</h3>
-            <p>{stats.gdp ? '$' + (parseFloat(stats.gdp) / 1e9).toFixed(2) + 'B' : 'N/A'}</p>
-          </div>
-          <div style={styles.statCard}>
-            <h3>Population</h3>
-            <p>{stats.population ? (parseFloat(stats.population) / 1e6).toFixed(2) + 'M' : 'N/A'}</p>
-          </div>
-          <div style={styles.statCard}>
-            <h3>GDP Growth</h3>
-            <p>{stats.gdp_growth_rate ? parseFloat(stats.gdp_growth_rate).toFixed(2) + '%' : 'N/A'}</p>
-          </div>
-          <div style={styles.statCard}>
-            <h3>Birth Rate</h3>
-            <p>{stats.birth_rate ? parseFloat(stats.birth_rate).toFixed(2) : 'N/A'}</p>
-          </div>
-          <div style={styles.statCard}>
-            <h3>Life Expectancy</h3>
-            <p>{stats.life_expectancy ? parseFloat(stats.life_expectancy).toFixed(1) + ' yrs' : 'N/A'}</p>
-          </div>
-          <div style={styles.statCard}>
-            <h3>Unemployment</h3>
-            <p>{stats.unemployment_rate ? parseFloat(stats.unemployment_rate).toFixed(2) + '%' : 'N/A'}</p>
-          </div>
+          <div style={styles.statCard}><h3>GDP</h3><p>{stats.gdp ? '$' + (parseFloat(stats.gdp) / 1e9).toFixed(2) + 'B' : 'N/A'}</p></div>
+          <div style={styles.statCard}><h3>Population</h3><p>{stats.population ? (parseFloat(stats.population) / 1e6).toFixed(2) + 'M' : 'N/A'}</p></div>
+          <div style={styles.statCard}><h3>GDP Growth</h3><p>{stats.gdp_growth_rate ? parseFloat(stats.gdp_growth_rate).toFixed(2) + '%' : 'N/A'}</p></div>
+          <div style={styles.statCard}><h3>Birth Rate</h3><p>{stats.birth_rate ? parseFloat(stats.birth_rate).toFixed(2) : 'N/A'}</p></div>
+          <div style={styles.statCard}><h3>Life Expectancy</h3><p>{stats.life_expectancy ? parseFloat(stats.life_expectancy).toFixed(1) + ' yrs' : 'N/A'}</p></div>
+          <div style={styles.statCard}><h3>Unemployment</h3><p>{stats.unemployment_rate ? parseFloat(stats.unemployment_rate).toFixed(2) + '%' : 'N/A'}</p></div>
         </div>
       ) : (
-        <div style={styles.noStats}>
-          <p>No statistical data available for this country yet.</p>
-        </div>
+        <div style={styles.noStats}><p>No statistical data available for this country yet.</p></div>
       )}
 
       {/* GDP Chart */}
@@ -254,7 +278,7 @@ function CountryProfile() {
       {similarCountries.length > 0 && (
         <div style={styles.card}>
           <h2 style={styles.cardTitle}>🌍 Similar Countries</h2>
-          <p style={styles.cardSubtitle}>Countries with similar economic profile and region</p>
+          <p style={styles.cardSubtitle}>Countries with similar economic profile</p>
           <div style={styles.similarGrid}>
             {similarCountries.map((c) => (
               <div
@@ -265,9 +289,7 @@ function CountryProfile() {
                 {c.flag_url && <img src={c.flag_url} alt="" style={styles.similarFlag} />}
                 <p style={styles.similarName}>{c.name}</p>
                 <p style={styles.similarDetail}>{c.region}</p>
-                <p style={styles.similarDetail}>
-                  GDP: ${c.gdp ? (parseFloat(c.gdp) / 1e9).toFixed(0) + 'B' : 'N/A'}
-                </p>
+                <p style={styles.similarDetail}>GDP: ${c.gdp ? (parseFloat(c.gdp) / 1e9).toFixed(0) + 'B' : 'N/A'}</p>
               </div>
             ))}
           </div>
@@ -289,9 +311,9 @@ const styles = {
   inputRow: { display: 'flex', gap: '1rem', flexWrap: 'wrap' },
   input: { flex: 1, padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem', outline: 'none', minWidth: '200px' },
   button: { padding: '0.75rem 1.5rem', backgroundColor: '#1a1a2e', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '1rem' },
-  strengthResult: { marginTop: '1.5rem', padding: '1.5rem', borderRadius: '8px' },
-  strengthMessage: { margin: '0 0 0.5rem', fontWeight: 'bold', fontSize: '1.1rem' },
-  strengthVerdict: { margin: 0, color: '#555' },
+  resultBox: { marginTop: '1.5rem', padding: '1.5rem', borderRadius: '8px' },
+  resultMessage: { margin: '0 0 0.5rem', fontWeight: 'bold', fontSize: '1.1rem' },
+  resultVerdict: { margin: '0 0 0.3rem', color: '#555', fontSize: '0.9rem' },
   statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1.5rem' },
   statCard: { backgroundColor: 'white', padding: '1.5rem', borderRadius: '12px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' },
   noStats: { backgroundColor: 'white', padding: '2rem', borderRadius: '12px', textAlign: 'center', color: '#888', marginBottom: '1.5rem' },
