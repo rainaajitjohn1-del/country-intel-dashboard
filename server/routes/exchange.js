@@ -51,7 +51,41 @@ router.get('/compare/:from/:to', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// Cost of living comparison
+router.get('/col/:homeCountry/:foreignCountry', async (req, res) => {
+  try {
+    const { homeCountry, foreignCountry } = req.params;
 
+    const result = await pool.query(
+      `SELECT c.name, c.iso_code, col.cost_of_living_index, col.rent_index, 
+              col.groceries_index, col.restaurant_index, col.purchasing_power_index
+       FROM cost_of_living col
+       JOIN countries c ON col.country_id = c.id
+       WHERE c.iso_code = ANY($1)`,
+      [[homeCountry.toUpperCase(), foreignCountry.toUpperCase()]]
+    );
+
+    if (result.rows.length < 2) {
+      return res.status(404).json({ error: 'Cost of living data not available for one or both countries' });
+    }
+
+    const home = result.rows.find(r => r.iso_code === homeCountry.toUpperCase());
+    const foreign = result.rows.find(r => r.iso_code === foreignCountry.toUpperCase());
+
+    const ratio = parseFloat(foreign.cost_of_living_index) / parseFloat(home.cost_of_living_index);
+
+    res.json({
+      home,
+      foreign,
+      ratio: ratio.toFixed(2),
+      verdict: ratio > 1 ? 'more expensive' : 'cheaper',
+      percentage: Math.abs((ratio - 1) * 100).toFixed(1)
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 module.exports = router;
 // Currency strength comparison
 router.get('/strength/:homeCurrency/:foreignCurrency', async (req, res) => {

@@ -20,3 +20,4 @@ export const getExchangeRate = (currencyCode) => api.get(`/exchange/${currencyCo
 export const getAllExchangeRates = () => api.get('/exchange');
 export const getCurrencyStrength = (homeCurrency, foreignCurrency) => api.get(`/exchange/strength/${homeCurrency}/${foreignCurrency}`);
 export const compareExchangeRates = (from, to) => api.get(`/exchange/compare/${from}/${to}`);
+export const getCostOfLiving = (homeCountry, foreignCountry) => api.get(`/exchange/col/${homeCountry}/${foreignCountry}`);

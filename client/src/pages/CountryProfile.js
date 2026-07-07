@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { getCountry, getLatestStats, getExchangeRate, getCountryStats, getCurrencyStrength } from '../services/api';
+import { getCountry, getLatestStats, getExchangeRate, getCountryStats, getCurrencyStrength, getCostOfLiving } from '../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 function CountryProfile() {
@@ -13,6 +13,9 @@ function CountryProfile() {
   const [homeCurrency, setHomeCurrency] = useState('');
   const [currencyStrength, setCurrencyStrength] = useState(null);
   const [strengthLoading, setStrengthLoading] = useState(false);
+  const [homeCountry, setHomeCountry] = useState('');
+  const [costOfLiving, setCostOfLiving] = useState(null);
+  const [colLoading, setColLoading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -62,6 +65,18 @@ function CountryProfile() {
       setCurrencyStrength({ error: 'Currency not found. Try a valid code like USD, INR, EUR.' });
     }
     setStrengthLoading(false);
+  };
+
+  const handleCostOfLiving = async () => {
+    if (!homeCountry || !country?.iso_code) return;
+    setColLoading(true);
+    try {
+      const res = await getCostOfLiving(homeCountry, country.iso_code);
+      setCostOfLiving(res.data);
+    } catch (err) {
+      setCostOfLiving({ error: 'Data not available for one or both countries.' });
+    }
+    setColLoading(false);
   };
 
   if (loading) return <p style={{ padding: '2rem' }}>Loading...</p>;
@@ -120,6 +135,65 @@ function CountryProfile() {
                     ? '✅ Your money goes further here'
                     : '⚠️ This destination is expensive for your currency'}
                 </p>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Cost of Living Estimator */}
+      <div style={styles.card}>
+        <h2 style={styles.cardTitle}>🏠 Cost of Living Estimator</h2>
+        <p style={styles.cardSubtitle}>Enter your home country code to compare cost of living with {country.name}</p>
+        <div style={styles.inputRow}>
+          <input
+            type="text"
+            placeholder="Your country code (e.g. IN, US, GB)"
+            value={homeCountry}
+            onChange={(e) => setHomeCountry(e.target.value.toUpperCase())}
+            style={styles.input}
+            maxLength={2}
+          />
+          <button
+            onClick={handleCostOfLiving}
+            style={styles.button}
+            disabled={colLoading}
+          >
+            {colLoading ? 'Checking...' : 'Compare Cost'}
+          </button>
+        </div>
+
+        {costOfLiving && (
+          <div style={{
+            ...styles.strengthResult,
+            backgroundColor: costOfLiving.verdict === 'cheaper' ? '#e8f5e9' : '#fce4ec',
+            borderLeft: `4px solid ${costOfLiving.verdict === 'cheaper' ? '#4caf50' : '#e91e63'}`,
+          }}>
+            {costOfLiving.error ? (
+              <p style={{ color: '#e91e63' }}>{costOfLiving.error}</p>
+            ) : (
+              <>
+                <p style={styles.strengthMessage}>
+                  {country.name} is {costOfLiving.percentage}% {costOfLiving.verdict} than {costOfLiving.home.name}
+                </p>
+                <div style={styles.colGrid}>
+                  <div style={styles.colItem}>
+                    <span>🛒 Groceries</span>
+                    <span>{costOfLiving.foreign.groceries_index} vs {costOfLiving.home.groceries_index}</span>
+                  </div>
+                  <div style={styles.colItem}>
+                    <span>🏠 Rent</span>
+                    <span>{costOfLiving.foreign.rent_index} vs {costOfLiving.home.rent_index}</span>
+                  </div>
+                  <div style={styles.colItem}>
+                    <span>🍽️ Restaurants</span>
+                    <span>{costOfLiving.foreign.restaurant_index} vs {costOfLiving.home.restaurant_index}</span>
+                  </div>
+                  <div style={styles.colItem}>
+                    <span>💪 Purchasing Power</span>
+                    <span>{costOfLiving.foreign.purchasing_power_index} vs {costOfLiving.home.purchasing_power_index}</span>
+                  </div>
+                </div>
               </>
             )}
           </div>
@@ -197,6 +271,8 @@ const styles = {
   statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1.5rem' },
   statCard: { backgroundColor: 'white', padding: '1.5rem', borderRadius: '12px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' },
   noStats: { backgroundColor: 'white', padding: '2rem', borderRadius: '12px', textAlign: 'center', color: '#888', marginBottom: '1.5rem' },
+  colGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem', marginTop: '1rem' },
+  colItem: { backgroundColor: 'rgba(0,0,0,0.05)', padding: '0.75rem', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.9rem' },
 };
 
 export default CountryProfile;
