@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import CountryProfile from './pages/CountryProfile';
 import Compare from './pages/Compare';
+import TravelEligibility from './pages/TravelEligibility';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/country/:iso_code" element={<CountryProfile />} />
         <Route path="/compare" element={<Compare />} />
+        <Route path="/travel" element={<TravelEligibility />} />
       </Routes>
     </Router>
   );

@@ -8,6 +8,7 @@ function Navbar() {
       <div style={styles.links}>
         <Link to="/" style={styles.link}>Home</Link>
         <Link to="/compare" style={styles.link}>Compare</Link>
+        <Link to="/travel" style={styles.link}>Travel</Link>
       </div>
     </nav>
   );
