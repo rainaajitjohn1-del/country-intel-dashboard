@@ -140,5 +140,30 @@ router.get('/:iso_code', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// Get platform stats for homepage
+router.get('/meta/stats', async (req, res) => {
+  try {
+    const countriesCount = await pool.query(
+      'SELECT COUNT(*) FROM countries WHERE currency_code IS NOT NULL AND capital != \'\''
+    );
+    const currenciesCount = await pool.query(
+      'SELECT COUNT(DISTINCT currency_code) FROM exchange_rates'
+    );
+    const dataPointsCount = await pool.query(
+      'SELECT COUNT(*) FROM country_stats'
+    );
+    const visaRecordsCount = await pool.query(
+      'SELECT COUNT(*) FROM visa_requirements'
+    );
 
+    res.json({
+      countries: parseInt(countriesCount.rows[0].count),
+      currencies: parseInt(currenciesCount.rows[0].count),
+      dataPoints: parseInt(dataPointsCount.rows[0].count),
+      visaRecords: parseInt(visaRecordsCount.rows[0].count),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 module.exports = router;

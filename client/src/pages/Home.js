@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import SearchBar from '../components/SearchBar';
 import CountryCard from '../components/CountryCard';
+import Spinner from '../components/Spinner';
 import { getAllCountries } from '../services/api';
+import axios from 'axios';
 
 function Home() {
   const [countries, setCountries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
+  const [platformStats, setPlatformStats] = useState(null);
 
   const regions = ['All', 'Africa', 'Americas', 'Asia', 'Europe', 'Oceania'];
 
@@ -20,6 +23,10 @@ function Home() {
         console.error(err);
         setLoading(false);
       });
+
+    axios.get('http://localhost:3001/api/countries/meta/stats')
+      .then(res => setPlatformStats(res.data))
+      .catch(err => console.error(err));
   }, []);
 
   const filtered = filter === 'All'
@@ -35,9 +42,18 @@ function Home() {
         </p>
         <SearchBar />
         <div style={styles.stats}>
-          <div style={styles.statPill}>🌐 190+ Countries</div>
-          <div style={styles.statPill}>📊 20 Years of Data</div>
-          <div style={styles.statPill}>💱 150+ Currencies</div>
+          <div style={styles.statPill}>
+            🌐 {platformStats ? platformStats.countries.toLocaleString() : '...'} Countries
+          </div>
+          <div style={styles.statPill}>
+            💱 {platformStats ? platformStats.currencies.toLocaleString() : '...'} Currencies
+          </div>
+          <div style={styles.statPill}>
+            📊 {platformStats ? platformStats.dataPoints.toLocaleString() : '...'} Data Points
+          </div>
+          <div style={styles.statPill}>
+            ✈️ {platformStats ? platformStats.visaRecords.toLocaleString() : '...'} Visa Records
+          </div>
         </div>
       </div>
 
@@ -61,7 +77,7 @@ function Home() {
         </div>
 
         {loading ? (
-          <p style={styles.loading}>Loading countries...</p>
+          <Spinner message="Loading countries..." />
         ) : (
           <>
             <p style={styles.count}>{filtered.length} countries</p>
@@ -114,7 +130,6 @@ const styles = {
     border: '1px solid #1a1a2e',
   },
   count: { color: '#888', fontSize: '0.9rem', marginBottom: '1rem' },
-  loading: { textAlign: 'center', color: '#888', padding: '2rem' },
   grid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
