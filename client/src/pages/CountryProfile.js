@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { getCountry, getLatestStats, getExchangeRate, getCountryStats, getCurrencyStrength, getCostOfLiving, getSimilarCountries, getBestTimeToVisit, addToWatchlist, removeFromWatchlist, checkWatchlist } from '../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../context/AuthContext';
+import Spinner from '../components/Spinner';
 
 function CountryProfile() {
   const { iso_code } = useParams();
@@ -132,7 +133,7 @@ function CountryProfile() {
     }
   };
 
-  if (loading) return <p style={{ padding: '2rem' }}>Loading...</p>;
+  if (loading) return <Spinner message="Loading country data..." />;
   if (!country) return <p style={{ padding: '2rem' }}>Country not found.</p>;
 
   return (
