@@ -12,7 +12,13 @@ const watchlistRouter = require('./routes/watchlist');
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'https://nationiq-pu15wi5sa-nationiq.vercel.app'
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
 // Routes
