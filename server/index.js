@@ -13,10 +13,9 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'https://nationiq-pu15wi5sa-nationiq.vercel.app'
-  ],
+  origin: function(origin, callback) {
+    callback(null, true);
+  },
   credentials: true
 }));
 app.use(express.json());
