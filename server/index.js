@@ -46,5 +46,11 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-
+app.get('/env-test', (req, res) => {
+  res.json({
+    has_database_url: !!process.env.DATABASE_URL,
+    node_env: process.env.NODE_ENV,
+    database_url_start: process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 20) : 'NOT SET'
+  });
+});
 module.exports = app;
