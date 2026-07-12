@@ -6,11 +6,11 @@ const pool = require('./db');
 const countriesRouter = require('./routes/countries');
 const statsRouter = require('./routes/stats');
 const exchangeRouter = require('./routes/exchange');
-
-const app = express();
-const PORT = process.env.PORT || 8000;
 const authRouter = require('./routes/auth');
 const watchlistRouter = require('./routes/watchlist');
+
+const app = express();
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -19,8 +19,6 @@ app.use(express.json());
 app.use('/api/countries', countriesRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/exchange', exchangeRouter);
-app.use('/api/auth', authRouter);
-app.use('/api/watchlist', watchlistRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/watchlist', watchlistRouter);
 
@@ -39,7 +37,9 @@ app.get('/db-test', async (req, res) => {
   }
 });
 
-// Start server
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+module.exports = app;
