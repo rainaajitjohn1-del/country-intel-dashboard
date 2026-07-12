@@ -15,7 +15,7 @@ function Watchlist() {
       return;
     }
     fetchWatchlist();
-  }, [user]);
+  }, [user, navigate]);
 
   const fetchWatchlist = async () => {
     try {
