@@ -24,7 +24,7 @@ function Home() {
         setLoading(false);
       });
 
-    axios.get('http://localhost:3001/api/countries/meta/stats')
+    axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:3001/api'}/countries/meta/stats`)
       .then(res => setPlatformStats(res.data))
       .catch(err => console.error(err));
   }, []);
